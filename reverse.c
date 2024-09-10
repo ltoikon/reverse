@@ -1,9 +1,9 @@
 /*Reverse*/
 /*Lauri Ikonen*/
 /*Started 02092024*/
-/*Modified 09092024*/
+/*Modified 10092024*/
 
-/*Program reads a file and add each line as a node to a linked list.
+/*Program reads a file and add each line as a List to a linked list.
 After reading, the linked list order is reversed and then printed.
 Memory is freed at the end of program*/
 
@@ -12,37 +12,39 @@ Memory is freed at the end of program*/
 #include <string.h>
 #include <stddef.h>
 
-#define BUFFER 6
+#define BUFFER 255
 
-typedef struct Node {
-    char textData[BUFFER];
-    //Line textLine;
-    struct Node* pNext;
-} Node;
+typedef struct List {
+    char *textData;
+    struct List* pNext;
+} List;
 
-typedef struct Line {
-    char dataCharacter;
-    struct Line* pNext;
-} Line;
+List * addition(/*Line *pRoot */ char *textLine, List *pRoot){
+    List *ptr, *pNewNode;
+    char *pLine = NULL;
 
-
-Node * addition(/*Line *pRoot */ char *textLine, Node *pRoot){
-    Node *ptr, *pNewNode;
-
-    //Memory allocation
-    if ((pNewNode = (Node*)malloc(sizeof(Node))) == NULL){
+    //Memory allocation for linked list node
+    if ((pNewNode = (List*)malloc(sizeof(List))) == NULL){
+        fprintf(stderr, "malloc failed\n");
+        exit(1);
+    }
+    
+    //Memory allocation for the line of text
+    if ((pLine = (char*)malloc(strlen(textLine)+1)) == NULL){
         fprintf(stderr, "malloc failed\n");
         exit(1);
     }
 
-    //Values for new node
+    //Values for new List
     if (textLine == NULL){
         strcpy(textLine, "empty, lineread error");
     }
-    strcpy(pNewNode->textData, textLine);
+    strcpy(pLine, textLine);
+
+    pNewNode->textData = pLine;
     pNewNode->pNext = NULL;
-   
-    //Add new node to list
+
+    //Add new list node to linked list structure
     //Initialize linked list if empty
     if (pRoot == NULL){
         pRoot = pNewNode;
@@ -51,33 +53,36 @@ Node * addition(/*Line *pRoot */ char *textLine, Node *pRoot){
     //Linked list existing already
     else {
         ptr = pRoot;
+        int i=0;
         while (ptr->pNext != NULL){
             ptr = ptr->pNext;
+            i++;
         }
         ptr->pNext = pNewNode;
     }
     return pRoot;
 }
 
-Node * reverseList(Node *pRoot){
-    Node *pCurrent = pRoot, *pPrev = NULL, *pNext;
+List * reverseList(List *pRoot){
+    List *pCurrent = pRoot, *pPrev = NULL, *pNext;
    
-    //Change each node's pNext to point previous node
+    //Change each List's pNext to point previous List
     while (pCurrent != NULL){
         pNext = pCurrent->pNext;
         pCurrent->pNext = pPrev;
         pPrev = pCurrent;
         pCurrent = pNext;
     }
-    //return root of the list, as pCurrent is NULL then pPrev must be last valid node
+    //return root of the list, as pCurrent is NULL then pPrev must be last valid List
     return pPrev;
 };
 
-Node * removeList(Node *pRoot){
-    Node *ptr = pRoot;
+List * removeList(List *pRoot){
+    List *ptr = pRoot;
     //Delete linked list node by node
     while (ptr != NULL){
         pRoot = ptr->pNext;
+        free(ptr->textData);
         free(ptr);
         ptr = pRoot;
     }
@@ -86,78 +91,100 @@ Node * removeList(Node *pRoot){
 
 
    
-Node * readFile(Node *pRoot, char *filename){
+List * readFile(List *pRoot, char *filename){
     FILE *pFile;
-    char fixedSizeLine[BUFFER];
+    char *line = NULL;
+    size_t len = 0;
+    __ssize_t read;
 
     if ((pFile = fopen(filename, "r")) == NULL){
         fprintf(stderr, "error: cannot open file '%s'\n", filename);
         exit(1);
     }
-   
-    while (fgets(fixedSizeLine, BUFFER, pFile)){
-        strtok(fixedSizeLine, "\n");
-        //first time when adding a node, the root pointer is NULL, thus pointer need to be returned
-        pRoot = addition(fixedSizeLine, pRoot);
-        }
 
+    while ((read = getline(&line, &len, pFile)) != -1 ){
+        char fixedSizeLine[len];
+        strcpy(fixedSizeLine, line);
+
+        //first time when adding a List, the root pointer is NULL, thus pointer need to be returned
+        pRoot = addition(fixedSizeLine, pRoot);
+        
+    }
+    free(line);
     fclose(pFile);
     return pRoot;
 }
 
-int printList(Node *pRoot){
-    Node *ptr = pRoot;
+List * readInput(List *pRoot){
+    char *line = NULL;
+    size_t len = 0;
+    __ssize_t read;
+    //printf("Enter data (End with ctrl + D):\n");
 
-    while (ptr != NULL){
-        fprintf(stdout, "%s\n", ptr->textData);
-        ptr = ptr->pNext;
+    while ((read = getline(&line, &len, stdin)) != -1 ){
+        char fixedSizeLine[len];
+        strcpy(fixedSizeLine, line);
+        pRoot = addition(fixedSizeLine, pRoot);
+        
     }
-    return 0;
+    free(line);
+    return pRoot;
 }
 
-int writeList(Node *pRoot, char *filename){
-    Node *ptr = pRoot;
-    FILE *pFile;
+int writeList(List *pRoot, char *filename){
+    List *ptr = pRoot;
 
-    if ((pFile = fopen(filename, "w")) == NULL){
-        fprintf(stderr, "error: cannot open file '%s'\n", filename);
-        exit(1);
+    if (strcmp("stdout", filename) != 0){
+        FILE *pFile;
+        if ((pFile = fopen(filename, "w")) == NULL){
+            fprintf(stderr, "error: cannot open file '%s'\n", filename);
+            exit(1);
+        }
+        while (ptr != NULL){
+            fprintf(pFile, "%s", ptr->textData);
+            ptr = ptr->pNext;
+        }
+        fclose(pFile);
     }
-   
-    while (ptr != NULL){
-        fprintf(pFile, "%s\n", ptr->textData);
+    else {
+        //printf("Output:\n");
+        while (ptr != NULL){
+        fprintf(stdout, "%s", ptr->textData);
         ptr = ptr->pNext;
+        }
     }
-    fclose(pFile);
     return 0;
 }
 
 
 
 int main(int argc, char *argv[]){
-    Node *pRoot = NULL;
+    List *pRoot = NULL;
     char input[BUFFER];
     char output[BUFFER] = "stdout";
 
-        char *line = NULL;
-    size_t n = 0;
-    size_t result = getline(&line, &n, stdin);
-    printf("result = %zd, n = %zu, line = \"%s\"\n", result, n, line);
-    free(line);
 
     if (argc == 1){
-        fprintf(stderr, "No input file given\n");
-        exit(1);
+        pRoot = readInput(pRoot);
     }
    
+   /* Parameters are saved to variables for file opening,
+   problems from possible buffer overflow is avoided 
+   using strncpy and adding null termination */
     if (argc == 2){
-        strcpy(input, argv[1]);
+        strncpy(input, argv[1], BUFFER);
+        input[BUFFER - 1] = '\0'; 
+
+        pRoot = readFile(pRoot, input);
     }
    
     if (argc == 3){
-        strcpy(input, argv[1]);
-        strcpy(output, argv[2]);
-       
+        strncpy(input, argv[1], BUFFER);
+        input[BUFFER - 1] = '\0'; 
+        strncpy(output, argv[2], BUFFER);
+        output[BUFFER - 1] = '\0';
+
+        pRoot = readFile(pRoot, input);
     }
 
     if (argc >= 4){
@@ -170,22 +197,13 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
-    pRoot = readFile(pRoot, input);
     pRoot = reverseList(pRoot);
-   
-    if (argv[2] == NULL){
-        printList(pRoot);
-        //writeList(pRoot, output);
-    }
-
-    if (argv[2] != NULL){
-        writeList(pRoot, output);
-    }
-
+    writeList(pRoot, output);
     pRoot = removeList(pRoot);
+    
     return 0;
 }
 
-/* TODO */
-/*String length: You may not assume anything about how long a line should be.
-Thus, you may have to read in a very long input line...*/
+/*TODO
+Comments and documentation.
+*/
