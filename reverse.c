@@ -1,7 +1,7 @@
 /*Reverse*/
 /*Lauri Ikonen*/
 /*Started 02092024*/
-/*Modified 10092024*/
+/*Modified 03122024*/
 
 /*Program reads a file and add each line as a List to a linked list.
 After reading, the linked list order is reversed and then printed.
@@ -19,7 +19,7 @@ typedef struct List {
     struct List* pNext;
 } List;
 
-List * addition(/*Line *pRoot */ char *textLine, List *pRoot){
+List * addition(char *textLine, List *pRoot){
     List *ptr, *pNewNode;
     char *pLine = NULL;
 
@@ -66,7 +66,7 @@ List * addition(/*Line *pRoot */ char *textLine, List *pRoot){
 List * reverseList(List *pRoot){
     List *pCurrent = pRoot, *pPrev = NULL, *pNext;
    
-    //Change each List's pNext to point previous List
+    //Change each node's pNext to point to the previous node 
     while (pCurrent != NULL){
         pNext = pCurrent->pNext;
         pCurrent->pNext = pPrev;
@@ -97,6 +97,7 @@ List * readFile(List *pRoot, char *filename){
     size_t len = 0;
     __ssize_t read;
 
+    //file opening with error check
     if ((pFile = fopen(filename, "r")) == NULL){
         fprintf(stderr, "error: cannot open file '%s'\n", filename);
         exit(1);
@@ -121,6 +122,7 @@ List * readInput(List *pRoot){
     __ssize_t read;
     //printf("Enter data (End with ctrl + D):\n");
 
+    //add each line to the list
     while ((read = getline(&line, &len, stdin)) != -1 ){
         char fixedSizeLine[len];
         strcpy(fixedSizeLine, line);
@@ -134,23 +136,27 @@ List * readInput(List *pRoot){
 int writeList(List *pRoot, char *filename){
     List *ptr = pRoot;
 
+    //file output
     if (strcmp("stdout", filename) != 0){
         FILE *pFile;
+        //open file with error check
         if ((pFile = fopen(filename, "w")) == NULL){
             fprintf(stderr, "error: cannot open file '%s'\n", filename);
             exit(1);
         }
+        //write lines
         while (ptr != NULL){
             fprintf(pFile, "%s", ptr->textData);
             ptr = ptr->pNext;
         }
+
         fclose(pFile);
-    }
-    else {
-        //printf("Output:\n");
+
+    } else {
+        //console output
         while (ptr != NULL){
-        fprintf(stdout, "%s", ptr->textData);
-        ptr = ptr->pNext;
+            fprintf(stdout, "%s", ptr->textData);
+            ptr = ptr->pNext;
         }
     }
     return 0;
@@ -163,21 +169,24 @@ int main(int argc, char *argv[]){
     char input[BUFFER];
     char output[BUFFER] = "stdout";
 
-
+    /*No parameter given*/
     if (argc == 1){
         pRoot = readInput(pRoot);
     }
    
-   /* Parameters are saved to variables for file opening,
-   problems from possible buffer overflow is avoided 
-   using strncpy and adding null termination */
+    /*Only input file given*/
     if (argc == 2){
+        /* Parameters are saved to variables for file opening,
+        problems from possible buffer overflow is avoided 
+        using strncpy and adding null termination */
+
         strncpy(input, argv[1], BUFFER);
         input[BUFFER - 1] = '\0'; 
 
         pRoot = readFile(pRoot, input);
     }
-   
+
+    /*Input and output file given as parameters*/
     if (argc == 3){
         strncpy(input, argv[1], BUFFER);
         input[BUFFER - 1] = '\0'; 
@@ -186,12 +195,12 @@ int main(int argc, char *argv[]){
 
         pRoot = readFile(pRoot, input);
     }
-
+    /*Too many parameters*/
     if (argc >= 4){
         fprintf(stderr, "usage: reverse <input> <output>\n");
         exit(1);
     }
-
+    /*Input and output are same file*/
     if (strcmp(output, input) == 0){
         fprintf(stderr, "Input and output file must differ\n");
         exit(1);
